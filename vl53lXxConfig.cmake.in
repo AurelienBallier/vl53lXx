@@ -1,0 +1,13 @@
+# - Config file for the vl53lXx package
+
+# Compute paths
+get_filename_component(VL53LXX_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+set(VL53LXX_INCLUDE_DIRS "@CONF_INCLUDE_DIRS@")
+
+# Our library dependencies (contains definitions for IMPORTED targets)
+# if(NOT TARGET vl53lXx)
+#   include("${VL53LXX_CMAKE_DIR}/vl53lXxTargets.cmake")
+# endif()
+
+# These are IMPORTED targets created by vl53lXxTargets.cmake
+set(VL53LXX_LIBRARIES vl53lXx)
