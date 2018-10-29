@@ -39,18 +39,22 @@ void VL53L1X::setAddress(uint8_t new_addr)
 // mode.
 bool VL53L1X::init(bool io_2v8)
 {
+  printf("Init...\n");
+
+  writeReg(VL53L1X_DEFINITIONS::SOFT_RESET, 0x00);
+  usleep(100);
+  //writeReg(VL53L1X_DEFINITIONS::SOFT_RESET, 0x01);
+
   // check model ID and module type registers (values specified in datasheet)
   uint16_t model_id = readReg16Bit(VL53L1X_DEFINITIONS::IDENTIFICATION__MODEL_ID);
-  if (model_id != 0xEACC) {
+  if (model_id != 0xFE10) {//0xEACC
     printf("ERROR: Wrong identification model ID (%d)! \n", model_id);
     return false;
   }
 
-  // VL53L1_software_reset() begin
+  printf("Model id: %d\n", model_id);
 
-  writeReg(VL53L1X_DEFINITIONS::SOFT_RESET, 0x00);
-  usleep(100);
-  writeReg(VL53L1X_DEFINITIONS::SOFT_RESET, 0x01);
+  // VL53L1_software_reset() begin
 
   // give it some time to boot; otherwise the sensor NACKs during the readReg()
   // call below and the Arduino 101 doesn't seem to handle that well
@@ -58,7 +62,7 @@ bool VL53L1X::init(bool io_2v8)
 
   // VL53L1_poll_for_boot_completion() begin
 
-  startTimeout();
+  /*startTimeout();
 
   // check last_status in case we still get a NACK to try to deal with it correctly
   while ((readReg(VL53L1X_DEFINITIONS::FIRMWARE__SYSTEM_STATUS) & 0x01) == 0 || last_status != 0)
@@ -69,7 +73,7 @@ bool VL53L1X::init(bool io_2v8)
       printf("ERROR: bad firmware status! \n");
       return false;
     }
-  }
+  }*/
   // VL53L1_poll_for_boot_completion() end
 
   // VL53L1_software_reset() end
@@ -254,9 +258,10 @@ uint16_t VL53L1X::readReg16Bit(uint16_t reg)
 
   return value;*/
 
-  uint16_t buffer[1];
-  this->i2c->readWord(reg, buffer);
-  return buffer[0];
+  uint16_t buffer;
+    printf("read word...\n");
+  this->i2c->readWord(reg, &buffer);
+  return buffer;
 }
 
 // Read a 32-bit register
