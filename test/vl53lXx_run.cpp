@@ -20,7 +20,7 @@ int main(int argc, char** argv){
         ("bus", po::value<unsigned int>()->default_value(1), "Choose I2C bus to use.")
         ("address", po::value<unsigned int>()->default_value(0), "I2C addrss of the slave device.")
         ("single", po::bool_switch()->default_value(false), "Start a single distance measurement instead of continuous.")
-        ("period", po::value<unsigned int>()->default_value(100), "Refresh period in milliseconds.")
+        ("period", po::value<unsigned int>()->default_value(1000), "Refresh period in milliseconds.")
     ;
 
     po::variables_map vm;
@@ -39,9 +39,11 @@ int main(int argc, char** argv){
 
     switch(vm["model"].as<unsigned int>()){
         case 0:
+            std::cout << "Initializing VL53L0X..." << std::endl;
             range_sensor = (address != 0) ? new VL53L0X(bus, address) : new VL53L0X(bus);
             break;
         case 1:
+            std::cout << "Initializing VL53L1X..." << std::endl;
             range_sensor = (address != 0) ? new VL53L1X(bus, address) : new VL53L1X(bus);
             break;
         default:
@@ -49,22 +51,34 @@ int main(int argc, char** argv){
             return -1;
     }
 
-    bool single = vm["single"].as<bool>();
-
-    if(single){
-        std::cout << "Distance: " << range_sensor->readRangeSingleMillimeters() << "mm." << std::endl;
-    }else{
-        unsigned int period = vm["period"].as<unsigned int>();
-
-        range_sensor->startContinuous(period);
-
-        while(true){
-            std::cout << "Distance: " << range_sensor->readRangeContinuousMillimeters() << "mm." << std::endl;
-            usleep(period*1000);
-        }
-
-        range_sensor->stopContinuous();
+    int timeout_counter = 0;
+    while((!range_sensor->init()) && timeout_counter < 10){
+        timeout_counter++;
+        usleep(200000);
     }
+
+    if(timeout_counter < 10){
+        bool single = vm["single"].as<bool>();
+
+        if(single){
+            std::cout << "Distance: " << range_sensor->readRangeSingleMillimeters() << "mm." << std::endl;
+        }else{
+            unsigned int period = vm["period"].as<unsigned int>();
+
+            range_sensor->startContinuous(period);
+
+            while(true){
+                std::cout << "Distance: " << range_sensor->readRangeContinuousMillimeters() << "mm." << std::endl;
+                usleep(period*1000);
+            }
+
+            range_sensor->stopContinuous();
+        }
+    }else{
+        std::cerr << "Initialization timed out!!" << std::endl;
+    }
+
+    delete range_sensor;
 
     return 0;
 }

@@ -1,6 +1,8 @@
 #ifndef _VL53L1X_H
 #define _VL53L1X_H
 
+#include <stdio.h>
+#include <string.h>
 #include <time.h>
 
 #include <vl53lXx/vl53lxx.hpp>
@@ -118,6 +120,9 @@ class VL53L1X : public VL53LXX
     void readResults();
     void updateDSS();
     void getRangingData();
+
+    int tmp_data[1024];
+    int tmp_data_old[1024];
 
     static uint32_t decodeTimeout(uint16_t reg_val);
     static uint16_t encodeTimeout(uint32_t timeout_mclks);

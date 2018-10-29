@@ -55,9 +55,10 @@ VL53L0X::VL53L0X(uint8_t port, const int16_t xshutGPIOPin, bool ioMode2v8, const
 
 /*** Public Methods ***/
 
-void VL53L0X::initialize() {
+bool VL53L0X::init(bool data) {
 	this->initGPIO();
 	this->initHardware();
+	return true;
 }
 
 void VL53L0X::powerOn() {

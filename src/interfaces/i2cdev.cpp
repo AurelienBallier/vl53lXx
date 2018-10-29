@@ -60,7 +60,7 @@ I2Cdev::I2Cdev(uint8_t port, uint8_t address):
     I2Cgeneric(port, address),
     address(address)
 {
-    sprintf(i2c_path, I2C_DEV_PATH, port);
+    sprintf(this->i2c_path, I2C_DEV_PATH, port);
 }
 
 /** Set device I2C address.
@@ -183,7 +183,7 @@ int8_t I2Cdev::readWord(uint8_t regAddr, uint16_t *data, uint16_t timeout) {
  */
 int8_t I2Cdev::readBytes(uint8_t regAddr, uint8_t length, uint8_t *data, uint16_t timeout) {
     int8_t count = 0;
-    int fd = open(I2C_DEV_PATH, O_RDWR);
+    int fd = open(this->i2c_path, O_RDWR);
 
     if (fd < 0) {
         fprintf(stderr, "Failed to open device: %s\n", strerror(errno));
@@ -225,17 +225,52 @@ int8_t I2Cdev::readBytes(uint8_t regAddr, uint8_t length, uint8_t *data, uint16_
  * @return Number of words read (0 indicates failure)
  */
 int8_t I2Cdev::readWords(uint8_t regAddr, uint8_t length, uint16_t *data, uint16_t timeout) {
-    int8_t count = 0;
+    //int8_t count = 0;
 
     // Use readBytes() and potential byteswap
-    printf("ReadWords() not implemented\n");
+    //printf("ReadWords() not implemented\n");
     // keep the compiler quiet
-    *data = 0;
+    /**data = 0;
     (void)regAddr;
     (void)length;
     (void)timeout;
 
+    return count;*/
+    int8_t count = 0;
+    int fd = open(this->i2c_path, O_RDWR);
+
+    if (fd < 0) {
+        fprintf(stderr, "Failed to open device: %s\n", strerror(errno));
+        return(-1);
+    }
+    if (ioctl(fd, I2C_SLAVE, this->address) < 0) {
+        fprintf(stderr, "Failed to select device: %s\n", strerror(errno));
+        close(fd);
+        return(-1);
+    }
+    if (write(fd, &regAddr, 1) != 1) {
+        fprintf(stderr, "Failed to write reg: %s\n", strerror(errno));
+        close(fd);
+        return(-1);
+    }
+    count = read(fd, data, length*2);
+    if (count < 0) {
+        fprintf(stderr, "Failed to read device(%d): %s\n", count, ::strerror(errno));
+        close(fd);
+        return(-1);
+    } else if (count/2 != length) {
+        fprintf(stderr, "Short read  from device, expected %d, got %d\n", length, count);
+        close(fd);
+        return(-1);
+    }
+    close(fd);
+
+    // Suppress compiler warning
+    (void)timeout;
+
     return count;
+
+    
 }
 
 /** write a single bit in an 8-bit device register.
@@ -354,7 +389,7 @@ bool I2Cdev::writeBytes(uint8_t regAddr, uint8_t length, uint8_t* data) {
         return(FALSE);
     }
 
-    fd = open(I2C_DEV_PATH, O_RDWR);
+    fd = open(this->i2c_path, O_RDWR);
     if (fd < 0) {
         fprintf(stderr, "Failed to open device: %s\n", strerror(errno));
         return(FALSE);
@@ -400,7 +435,7 @@ bool I2Cdev::writeWords(uint8_t regAddr, uint8_t length, uint16_t* data) {
         return(FALSE);
     }
 
-    fd = open(I2C_DEV_PATH, O_RDWR);
+    fd = open(this->i2c_path, O_RDWR);
     if (fd < 0) {
         fprintf(stderr, "Failed to open device: %s\n", strerror(errno));
         return(FALSE);

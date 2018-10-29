@@ -35,7 +35,7 @@ class VL53L0X : public VL53LXX {
 		 *
 		 * It's not part of the constructor as it can throw errors.
 		 */
-		void initialize();
+		bool init(bool unused = true);
 		/**
 		 * Power on the sensor by setting its XSHUT pin to high via host's GPIO.
 		 */

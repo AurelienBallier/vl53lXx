@@ -22,6 +22,8 @@ class VL53LXX
       delete this->i2c;
     }
 
+    virtual bool init(bool unused = true) = 0;
+
     virtual void setAddress(uint8_t new_addr) = 0;
     uint8_t getAddress() { return this->i2c->getAddress(); }
 
