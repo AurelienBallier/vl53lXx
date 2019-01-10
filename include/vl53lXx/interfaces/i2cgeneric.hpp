@@ -61,6 +61,7 @@ class I2Cgeneric {
         virtual int8_t readWord(uint8_t regAddr, uint16_t *data, uint16_t timeout=0) = 0;
         virtual int8_t readBytes(uint8_t regAddr, uint8_t length, uint8_t *data, uint16_t timeout=0) = 0;
         virtual int8_t readWords(uint8_t regAddr, uint8_t length, uint16_t *data, uint16_t timeout=0) = 0;
+        virtual int8_t readBytes16(uint16_t regAddr, uint8_t length, uint8_t *data, uint16_t timeout=0) = 0;
 
         virtual bool writeBit(uint8_t regAddr, uint8_t bitNum, uint8_t data) = 0;
         virtual bool writeBitW(uint8_t regAddr, uint8_t bitNum, uint16_t data) = 0;

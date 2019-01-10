@@ -48,7 +48,7 @@ bool VL53L1X::init(bool io_2v8)
   // check model ID and module type registers (values specified in datasheet)
   uint16_t model_id = readReg16Bit(VL53L1X_DEFINITIONS::IDENTIFICATION__MODEL_ID);
   if (model_id != 0xFE10) {//0xEACC
-    printf("ERROR: Wrong identification model ID (%d)! \n", model_id);
+    printf("ERROR: Wrong identification model ID (%u)! \n", model_id);
     return false;
   }
 

@@ -217,6 +217,72 @@ int8_t I2Cdev::readBytes(uint8_t regAddr, uint8_t length, uint8_t *data, uint16_
     return count;
 }
 
+/** Read multiple bytes from an 16-bit device register.
+ * @param regAddr First register regAddr to read from
+ * @param length Number of bytes to read
+ * @param data Buffer to store read data in
+ * @param timeout Optional read timeout in milliseconds (0 to disable, leave off to use default class value in I2Cdev::readTimeout)
+ * @return Number of bytes read (-1 indicates failure)
+ */
+int8_t readBytes16(uint16_t regAddr, uint8_t length, uint8_t *data, uint16_t timeout=0){
+    int8_t count = 0;
+    int fd = open(this->i2c_path, O_RDWR);
+
+    if (fd < 0) {
+        fprintf(stderr, "Failed to open device: %s\n", strerror(errno));
+        return(-1);
+    }
+    if (ioctl(fd, I2C_SLAVE, this->address) < 0) {
+        fprintf(stderr, "Failed to select device: %s\n", strerror(errno));
+        close(fd);
+        return(-1);
+    }
+    /*if (write(fd, &regAddr, 1) != 1) {
+        fprintf(stderr, "Failed to write reg: %s\n", strerror(errno));
+        close(fd);
+        return(-1);
+    }
+    count = read(fd, data, length);
+    if (count < 0) {
+        fprintf(stderr, "Failed to read device(%d): %s\n", count, ::strerror(errno));
+        close(fd);
+        return(-1);
+    } else if (count != length) {
+        fprintf(stderr, "Short read  from device, expected %d, got %d\n", length, count);
+        close(fd);
+        return(-1);
+    }*/
+
+    int err;
+    uint8_t buf[2] = { regAddr >> 8, regAddr & 0xff };
+    struct i2c_rdwr_ioctl_data msgset;
+    struct i2c_msg msgs[2] = {
+        {
+            .addr = this->address,
+            .flags = 0,
+            .len = 2,
+            .buf = buf,
+        },
+        {
+            .addr = this->address,
+            .flags = I2C_M_RD,
+            .len = n,
+            .buf = values,
+        },
+    };
+
+    msgset.msgs = msgs;
+    msgset.nmsgs = 2;
+
+    err = ioctl(fd, I2C_RDWR, &msgset);
+    close(fd);
+
+    // Suppress compiler warning
+    (void)timeout;
+
+    return count;
+}
+
 /** Read multiple words from a 16-bit device register.
  * @param regAddr First register regAddr to read from
  * @param length Number of words to read
