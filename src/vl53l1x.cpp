@@ -43,10 +43,12 @@ bool VL53L1X::init(bool io_2v8)
 
   writeReg(VL53L1X_DEFINITIONS::SOFT_RESET, 0x00);
   usleep(100);
-  //writeReg(VL53L1X_DEFINITIONS::SOFT_RESET, 0x01);
+  writeReg(VL53L1X_DEFINITIONS::SOFT_RESET, 0x01);
+  printf("Reset ok...\n");
 
   // check model ID and module type registers (values specified in datasheet)
   uint16_t model_id = readReg16Bit(VL53L1X_DEFINITIONS::IDENTIFICATION__MODEL_ID);
+  printf("Model id: %d\n", model_id);
   if (model_id != 0xFE10) {//0xEACC
     printf("ERROR: Wrong identification model ID (%u)! \n", model_id);
     return false;
@@ -189,6 +191,7 @@ void VL53L1X::writeReg(uint16_t reg, uint8_t value)
   Wire.write( reg       & 0xFF); // reg low byte
   Wire.write(value);
   last_status = Wire.endTransmission();*/
+  printf("Write to byte\n");
   this->i2c->writeByte(reg, value);
 }
 
@@ -223,7 +226,7 @@ void VL53L1X::writeReg32Bit(uint16_t reg, uint32_t value)
 }
 
 // Read an 8-bit register
-uint8_t VL53L1X::readReg(VL53L1X_DEFINITIONS::vl53l1x_registers reg)
+uint8_t VL53L1X::readReg(uint16_t reg)
 {
   /*uint8_t value;
 

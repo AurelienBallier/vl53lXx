@@ -6,7 +6,7 @@
 namespace VL53L1X_DEFINITIONS{
 
 	// register addresses from API vl53l1x_register_map.h
-	enum vl53l1x_registers
+	enum vl53l1x_registers : uint16_t
 	{
 		SOFT_RESET                                                                 = 0x0000,
 		I2C_SLAVE__DEVICE_ADDRESS                                                  = 0x0001,

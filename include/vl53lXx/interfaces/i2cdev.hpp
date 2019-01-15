@@ -64,6 +64,7 @@ class I2Cdev: public I2Cgeneric {
         void setAddress(uint8_t address);
         uint8_t getAddress();
 
+        //8-bits addresses
         int8_t readBit(uint8_t regAddr, uint8_t bitNum, uint8_t *data, uint16_t timeout=0);
         int8_t readBitW(uint8_t regAddr, uint8_t bitNum, uint16_t *data, uint16_t timeout=0);
         int8_t readBits(uint8_t regAddr, uint8_t bitStart, uint8_t length, uint8_t *data, uint16_t timeout=0);
@@ -72,8 +73,18 @@ class I2Cdev: public I2Cgeneric {
         int8_t readWord(uint8_t regAddr, uint16_t *data, uint16_t timeout=0);
         int8_t readBytes(uint8_t regAddr, uint8_t length, uint8_t *data, uint16_t timeout=0);
         int8_t readWords(uint8_t regAddr, uint8_t length, uint16_t *data, uint16_t timeout=0);
-        int8_t readBytes16(uint16_t regAddr, uint8_t length, uint8_t *data, uint16_t timeout=0);
 
+        //16-bits addresses
+        int8_t readBit(uint16_t regAddr, uint8_t bitNum, uint8_t *data, uint16_t timeout=0);
+        int8_t readBitW(uint16_t regAddr, uint8_t bitNum, uint16_t *data, uint16_t timeout=0);
+        int8_t readBits(uint16_t regAddr, uint8_t bitStart, uint8_t length, uint8_t *data, uint16_t timeout=0);
+        int8_t readBitsW(uint16_t regAddr, uint8_t bitStart, uint8_t length, uint16_t *data, uint16_t timeout=0);
+        int8_t readByte(uint16_t regAddr, uint8_t *data, uint16_t timeout=0);
+        int8_t readWord(uint16_t regAddr, uint16_t *data, uint16_t timeout=0);
+        int8_t readBytes(uint16_t regAddr, uint8_t length, uint8_t *data, uint16_t timeout=0);
+        int8_t readWords(uint16_t regAddr, uint8_t length, uint16_t *data, uint16_t timeout=0);
+
+        //8-bits addresses
         bool writeBit(uint8_t regAddr, uint8_t bitNum, uint8_t data);
         bool writeBitW(uint8_t regAddr, uint8_t bitNum, uint16_t data);
         bool writeBits(uint8_t regAddr, uint8_t bitStart, uint8_t length, uint8_t data);
@@ -82,6 +93,16 @@ class I2Cdev: public I2Cgeneric {
         bool writeWord(uint8_t regAddr, uint16_t data);
         bool writeBytes(uint8_t regAddr, uint8_t length, uint8_t *data);
         bool writeWords(uint8_t regAddr, uint8_t length, uint16_t *data);
+
+        //16-bits addresses
+        bool writeBit(uint16_t regAddr, uint8_t bitNum, uint8_t data);
+        bool writeBitW(uint16_t regAddr, uint8_t bitNum, uint16_t data);
+        bool writeBits(uint16_t regAddr, uint8_t bitStart, uint8_t length, uint8_t data);
+        bool writeBitsW(uint16_t regAddr, uint8_t bitStart, uint8_t length, uint16_t data);
+        bool writeByte(uint16_t regAddr, uint8_t data);
+        bool writeWord(uint16_t regAddr, uint16_t data);
+        bool writeBytes(uint16_t regAddr, uint8_t length, uint8_t *data);
+        bool writeWords(uint16_t regAddr, uint8_t length, uint16_t *data);
 
         uint16_t readTimeout = 0;
     

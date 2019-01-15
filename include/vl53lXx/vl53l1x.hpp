@@ -34,7 +34,7 @@ class VL53L1X : public VL53LXX
     void writeReg(uint16_t reg, uint8_t value);
     void writeReg16Bit(uint16_t reg, uint16_t value);
     void writeReg32Bit(uint16_t reg, uint32_t value);
-    uint8_t readReg(VL53L1X_DEFINITIONS::vl53l1x_registers reg);
+    uint8_t readReg(uint16_t reg);
     uint16_t readReg16Bit(uint16_t reg);
     uint32_t readReg32Bit(uint16_t reg);
 
