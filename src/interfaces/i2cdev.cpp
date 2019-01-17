@@ -64,6 +64,11 @@ I2Cdev::I2Cdev(uint8_t port, uint8_t address):
     sprintf(this->i2c_path, I2C_DEV_PATH, port);
 }
 
+/** Default destructor.
+ */
+
+I2Cdev::~I2Cdev(){}
+
 /** Set device I2C address.
  * @param address Device address
  */
@@ -360,7 +365,6 @@ bool I2Cdev::writeBitsW(uint8_t regAddr, uint8_t bitStart, uint8_t length, uint1
  * @return Status of operation (true = success)
  */
 bool I2Cdev::writeByte(uint8_t regAddr, uint8_t data) {
-    printf("Write byte to 8-bit address.\n");
     return this->writeBytes(regAddr, 1, &data);
 }
 
@@ -400,7 +404,7 @@ bool I2Cdev::writeBytes(uint8_t regAddr, uint8_t length, uint8_t* data) {
         return(FALSE);
     }
     buf[0] = regAddr;
-    memcpy(buf+1,data,length);
+    memcpy(buf+1, data, length);
     count = write(fd, buf, length+1);
     if (count < 0) {
         fprintf(stderr, "Failed to write device(%d): %s\n", count, ::strerror(errno));
@@ -560,6 +564,9 @@ int8_t I2Cdev::readWords(uint16_t regAddr, uint8_t length, uint16_t *data, uint1
     err = ioctl(fd, I2C_RDWR, &msgset);
     close(fd);
 
+    //Convert big to little endian if needed
+    bswap_table(length, data);
+
     // Suppress compiler warning
     (void)timeout;
 
@@ -670,7 +677,6 @@ int8_t I2Cdev::readWord(uint16_t regAddr, uint16_t *data, uint16_t timeout) {
  * @return Status of operation (true = success)
  */
 bool I2Cdev::writeBytes(uint16_t regAddr, uint8_t length, uint8_t* data) {
-    printf("Write 16-bit address.\n");
     int8_t count = 0;
     uint8_t buf[128];
 
@@ -694,7 +700,9 @@ bool I2Cdev::writeBytes(uint16_t regAddr, uint8_t length, uint8_t* data) {
     int err;
     buf[0] = (uint8_t)(regAddr >> 8);
     buf[1] = (uint8_t)(regAddr & 0xff);
-    memcpy(buf+2,data,length);
+
+    memcpy(buf+2, data, length*2);
+
     struct i2c_rdwr_ioctl_data msgset;
     struct i2c_msg msgs[2] = {
         {
@@ -744,7 +752,15 @@ bool I2Cdev::writeWords(uint16_t regAddr, uint8_t length, uint16_t* data) {
     int err;
     buf[0] = (uint8_t)(regAddr >> 8);
     buf[1] = (uint8_t)(regAddr & 0xff);
-    memcpy(buf+2,data,length);
+
+    //Convert little to big endian
+    bswap_table(length, data);
+    /*for (unsigned int i = 0; i < length; i++) {
+        buf[i*2+2] = data[i] >> 8;
+        buf[i*2+3] = data[i];
+    }*/
+    memcpy(buf+2, data, length*2);
+
     struct i2c_rdwr_ioctl_data msgset;
     struct i2c_msg msgs[2] = {
         {
@@ -852,7 +868,6 @@ bool I2Cdev::writeBitsW(uint16_t regAddr, uint8_t bitStart, uint8_t length, uint
  * @return Status of operation (true = success)
  */
 bool I2Cdev::writeByte(uint16_t regAddr, uint8_t data) {
-    printf("Write byte to 16-bit address.\n");
     return this->writeBytes(regAddr, 1, &data);
 }
 
@@ -863,4 +878,29 @@ bool I2Cdev::writeByte(uint16_t regAddr, uint8_t data) {
  */
 bool I2Cdev::writeWord(uint16_t regAddr, uint16_t data) {
     return this->writeWords(regAddr, 1, &data);
+}
+
+/** Helper function to convert array of big endian unsigned short to little endian unsigned short
+ * @param length Table length
+ * @param data Table data
+ */
+void I2Cdev::bswap_table(uint8_t length, uint16_t* data) {
+    for(unsigned int i=0; i < length; i++){
+        data[i] = bswap(data[i]);
+    }
+}
+
+/** Helper function to convert big endian unsigned short to little endian unsigned short
+ * @param val Unsigned short int to convert to little endian.
+ * @return Converted number
+ */
+uint16_t I2Cdev::bswap(uint16_t val) {
+    // It's a big-endian target architecture
+    #if defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN
+        return val;
+    // It's a little-endian target architecture
+    #elif defined(__BYTE_ORDER) && __BYTE_ORDER == __LITTLE_ENDIAN
+        uint8_t *b = (uint8_t*)&val;
+        return ((b[0] << 8) | b[1]);
+    #endif
 }

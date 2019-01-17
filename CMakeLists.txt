@@ -33,12 +33,15 @@ include_directories(
                       ${CMAKE_CURRENT_BINARY_DIR}
                    )
 
-if(BUILD_I2C_DEV)
-  MESSAGE("** Compile with i2c dev support.")
-  add_definitions(-DBUILD_I2C_DEV=ON)
-endif()
+set(PROJECT_SRC src/vl53lxx.cpp src/vl53l0x.cpp src/vl53l1x.cpp)
 
-add_library(${PROJECT_NAME} SHARED src/vl53l0x.cpp src/vl53l1x.cpp src/interfaces/i2cdev.cpp)
+#if(BUILD_I2C_DEV)
+MESSAGE("** Compile with i2c dev support.")
+add_definitions(-DBUILD_I2C_DEV=ON)
+set(PROJECT_SRC ${PROJECT_SRC} src/interfaces/i2cdev.cpp)
+#endif()
+
+add_library(${PROJECT_NAME} SHARED ${PROJECT_SRC})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${VL53LXX_VERSION})
 

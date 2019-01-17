@@ -22,14 +22,12 @@ class VL53L1X : public VL53LXX
 
     RangingData ranging_data;
 
-    uint8_t last_status; // status of last I2C transmission
-
-    VL53L1X(uint8_t port, const uint8_t address = VL53L1X_ADDRESS_DEFAULT);
+    VL53L1X(uint8_t port, const uint8_t address = VL53L1X_ADDRESS_DEFAULT, const int16_t xshutGPIOPin = -1, bool ioMode2v8 = true, float *calib = DEFAULT_CALIB, unsigned int timing_budget = 50000, unsigned int range_mode = VL53L1X_DEFINITIONS::Long);
     ~VL53L1X();
 
     void setAddress(uint8_t new_addr);
 
-    bool init(bool io_2v8 = true);
+    bool init();
 
     void writeReg(uint16_t reg, uint8_t value);
     void writeReg16Bit(uint16_t reg, uint16_t value);
@@ -44,7 +42,7 @@ class VL53L1X : public VL53LXX
     bool setMeasurementTimingBudget(uint32_t budget_us);
     uint32_t getMeasurementTimingBudget();
 
-    void startContinuous(uint32_t period_ms);
+    void startContinuous(uint32_t period_ms = 0);
     void stopContinuous();
     uint16_t readRangeSingleMillimeters(bool blocking = true);
     uint16_t readRangeContinuousMillimeters(bool blocking = true) { return readRangeSingleMillimeters(blocking); } // alias of read()
@@ -74,6 +72,9 @@ class VL53L1X : public VL53LXX
     // value in DSS_CONFIG__TARGET_TOTAL_RATE_MCPS register, used in DSS
     // calculations
     static const uint16_t TargetRate = 0x0A00;
+
+    //Timing budget and mode for ranging
+    unsigned int timing_budget, range_mode;
 
     // for storing values read from RESULT__RANGE_STATUS (0x0089)
     // through RESULT__PEAK_SIGNAL_COUNT_RATE_CROSSTALK_CORRECTED_MCPS_SD0_LOW

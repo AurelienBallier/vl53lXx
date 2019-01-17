@@ -49,7 +49,8 @@ THE SOFTWARE.
 
 class I2Cgeneric {
     public:
-        I2Cgeneric(uint8_t port, uint8_t address){};
+        I2Cgeneric(uint8_t port, uint8_t address){}
+        virtual ~I2Cgeneric(){}
 
         virtual void setAddress(uint8_t address) = 0;
         virtual uint8_t getAddress() = 0;
@@ -59,7 +60,7 @@ class I2Cgeneric {
         virtual int8_t readBitW(uint8_t regAddr, uint8_t bitNum, uint16_t *data, uint16_t timeout=0) = 0;
         virtual int8_t readBits(uint8_t regAddr, uint8_t bitStart, uint8_t length, uint8_t *data, uint16_t timeout=0) = 0;
         virtual int8_t readBitsW(uint8_t regAddr, uint8_t bitStart, uint8_t length, uint16_t *data, uint16_t timeout=0) = 0;
-        virtual int8_t readByte(uint8_t regAddr, uint8_t *data, uint16_t timeout=0);
+        virtual int8_t readByte(uint8_t regAddr, uint8_t *data, uint16_t timeout=0) = 0;
         virtual int8_t readWord(uint8_t regAddr, uint16_t *data, uint16_t timeout=0) = 0;
         virtual int8_t readBytes(uint8_t regAddr, uint8_t length, uint8_t *data, uint16_t timeout=0) = 0;
         virtual int8_t readWords(uint8_t regAddr, uint8_t length, uint16_t *data, uint16_t timeout=0) = 0;
@@ -79,7 +80,7 @@ class I2Cgeneric {
         virtual bool writeBitW(uint8_t regAddr, uint8_t bitNum, uint16_t data) = 0;
         virtual bool writeBits(uint8_t regAddr, uint8_t bitStart, uint8_t length, uint8_t data) = 0;
         virtual bool writeBitsW(uint8_t regAddr, uint8_t bitStart, uint8_t length, uint16_t data) = 0;
-        virtual bool writeByte(uint8_t regAddr, uint8_t data){ printf("virtual 8bit\n"); return false; }
+        virtual bool writeByte(uint8_t regAddr, uint8_t data) = 0;
         virtual bool writeWord(uint8_t regAddr, uint16_t data) = 0;
         virtual bool writeBytes(uint8_t regAddr, uint8_t length, uint8_t *data) = 0;
         virtual bool writeWords(uint8_t regAddr, uint8_t length, uint16_t *data) = 0;
@@ -89,7 +90,7 @@ class I2Cgeneric {
         virtual bool writeBitW(uint16_t regAddr, uint8_t bitNum, uint16_t data) = 0;
         virtual bool writeBits(uint16_t regAddr, uint8_t bitStart, uint8_t length, uint8_t data) = 0;
         virtual bool writeBitsW(uint16_t regAddr, uint8_t bitStart, uint8_t length, uint16_t data) = 0;
-        virtual bool writeByte(uint16_t regAddr, uint8_t data){ printf("virtual 16bit\n"); return false; }
+        virtual bool writeByte(uint16_t regAddr, uint8_t data) = 0;
         virtual bool writeWord(uint16_t regAddr, uint16_t data) = 0;
         virtual bool writeBytes(uint16_t regAddr, uint8_t length, uint8_t *data) = 0;
         virtual bool writeWords(uint16_t regAddr, uint8_t length, uint16_t *data) = 0;

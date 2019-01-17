@@ -54,12 +54,15 @@ THE SOFTWARE.
 #endif
 
 #include <cstdint>
+#include <sys/param.h>
+#include <endian.h>
 
 #include "i2cgeneric.hpp"
 
 class I2Cdev: public I2Cgeneric {
     public:
         I2Cdev(uint8_t port, uint8_t address);
+        ~I2Cdev();
 
         void setAddress(uint8_t address);
         uint8_t getAddress();
@@ -109,6 +112,9 @@ class I2Cdev: public I2Cgeneric {
     private:
         uint8_t address;
         char i2c_path[12];
+
+        uint16_t bswap(uint16_t val);
+        void bswap_table(uint8_t length, uint16_t* data);
 };
 
 #endif

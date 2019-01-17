@@ -1,7 +1,7 @@
 #ifndef _VL53L1X_defines_h
 #define _VL53L1X_defines_h
 
-#define VL53L1X_ADDRESS_DEFAULT 0x52
+#define VL53L1X_ADDRESS_DEFAULT 0x29
 
 namespace VL53L1X_DEFINITIONS{
 

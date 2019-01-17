@@ -8,28 +8,38 @@
 
 // Constructors ////////////////////////////////////////////////////////////////
 
-VL53L1X::VL53L1X(uint8_t port, uint8_t address):
-    VL53LXX(port, address)
+VL53L1X::VL53L1X(uint8_t port, uint8_t address, const int16_t xshutGPIOPin, bool ioMode2v8, float *calib, unsigned int timing_budget, unsigned int range_mode):
+    VL53LXX(port, address, xshutGPIOPin, ioMode2v8, calib)
   , io_timeout(0) // no timeout
   , did_timeout(false)
   , calibrated(false)
   , saved_vhv_init(0)
   , saved_vhv_timeout(0)
   , distance_mode(VL53L1X_DEFINITIONS::Unknown)
+  , timing_budget(timing_budget)
+  , range_mode(range_mode)
 {
+  writeReg(VL53L1X_DEFINITIONS::SOFT_RESET, 0x00);
+  usleep(100);
+  writeReg(VL53L1X_DEFINITIONS::SOFT_RESET, 0x01);
 }
 
 // Destructors ////////////////////////////////////////////////////////////////
 
-VL53L1X::~VL53L1X(){
-  delete i2c;
-}
+VL53L1X::~VL53L1X(){}
 
 // Public Methods //////////////////////////////////////////////////////////////
 
 void VL53L1X::setAddress(uint8_t new_addr)
 {
+  this->i2c->setAddress(VL53L1X_ADDRESS_DEFAULT);
+
+  writeReg(VL53L1X_DEFINITIONS::SOFT_RESET, 0x00);
+  usleep(100);
+  writeReg(VL53L1X_DEFINITIONS::SOFT_RESET, 0x01);
+
   writeReg(VL53L1X_DEFINITIONS::I2C_SLAVE__DEVICE_ADDRESS, new_addr & 0x7F);
+
   this->i2c->setAddress(new_addr);
 }
 
@@ -37,24 +47,14 @@ void VL53L1X::setAddress(uint8_t new_addr)
 // VL53L1_StaticInit().
 // If io_2v8 (optional) is true or not given, the sensor is configured for 2V8
 // mode.
-bool VL53L1X::init(bool io_2v8)
+bool VL53L1X::init()
 {
-  printf("Init...\n");
-
-  writeReg(VL53L1X_DEFINITIONS::SOFT_RESET, 0x00);
-  usleep(100);
-  writeReg(VL53L1X_DEFINITIONS::SOFT_RESET, 0x01);
-  printf("Reset ok...\n");
-
   // check model ID and module type registers (values specified in datasheet)
   uint16_t model_id = readReg16Bit(VL53L1X_DEFINITIONS::IDENTIFICATION__MODEL_ID);
-  printf("Model id: %d\n", model_id);
-  if (model_id != 0xFE10) {//0xEACC
+  if (model_id != 0xEACC) {
     printf("ERROR: Wrong identification model ID (%u)! \n", model_id);
     return false;
   }
-
-  printf("Model id: %d\n", model_id);
 
   // VL53L1_software_reset() begin
 
@@ -64,10 +64,10 @@ bool VL53L1X::init(bool io_2v8)
 
   // VL53L1_poll_for_boot_completion() begin
 
-  /*startTimeout();
+  startTimeout();
 
   // check last_status in case we still get a NACK to try to deal with it correctly
-  while ((readReg(VL53L1X_DEFINITIONS::FIRMWARE__SYSTEM_STATUS) & 0x01) == 0 || last_status != 0)
+  while ((readReg(VL53L1X_DEFINITIONS::FIRMWARE__SYSTEM_STATUS) & 0x01) == 0 )
   {
     if (checkTimeoutExpired())
     {
@@ -75,7 +75,8 @@ bool VL53L1X::init(bool io_2v8)
       printf("ERROR: bad firmware status! \n");
       return false;
     }
-  }*/
+  }
+  
   // VL53L1_poll_for_boot_completion() end
 
   // VL53L1_software_reset() end
@@ -83,18 +84,15 @@ bool VL53L1X::init(bool io_2v8)
   // VL53L1_DataInit() begin
 
   // sensor uses 1V8 mode for I/O by default; switch to 2V8 mode if necessary
-  std::cout << "1" << std::endl;
-  if (io_2v8)
+  if (this->ioMode2v8)
   {
     writeReg(VL53L1X_DEFINITIONS::PAD_I2C_HV__EXTSUP_CONFIG,
       readReg(VL53L1X_DEFINITIONS::PAD_I2C_HV__EXTSUP_CONFIG) | 0x01);
   }
-  std::cout << "2" << std::endl;
 
   // store oscillator info for later use
   fast_osc_frequency = readReg16Bit(VL53L1X_DEFINITIONS::OSC_MEASURED__FAST_OSC__FREQUENCY);
   osc_calibrate_val = readReg16Bit(VL53L1X_DEFINITIONS::RESULT__OSC_CALIBRATE_VAL);
-  std::cout << "3: " << fast_osc_frequency << ", " << osc_calibrate_val << std::endl;
 
   // VL53L1_DataInit() end
 
@@ -125,27 +123,23 @@ bool VL53L1X::init(bool io_2v8)
   writeReg(VL53L1X_DEFINITIONS::ALGO__RANGE_IGNORE_VALID_HEIGHT_MM, 0xFF);
   writeReg(VL53L1X_DEFINITIONS::ALGO__RANGE_MIN_CLIP, 0); // tuning parm default
   writeReg(VL53L1X_DEFINITIONS::ALGO__CONSISTENCY_CHECK__TOLERANCE, 2); // tuning parm default
-  std::cout << "4" << std::endl;
 
   // general config
   writeReg16Bit(VL53L1X_DEFINITIONS::SYSTEM__THRESH_RATE_HIGH, 0x0000);
   writeReg16Bit(VL53L1X_DEFINITIONS::SYSTEM__THRESH_RATE_LOW, 0x0000);
   writeReg(VL53L1X_DEFINITIONS::DSS_CONFIG__APERTURE_ATTENUATION, 0x38);
-  std::cout << "5" << std::endl;
 
   // timing config
   // most of these settings will be determined later by distance and timing
   // budget configuration
   writeReg16Bit(VL53L1X_DEFINITIONS::RANGE_CONFIG__SIGMA_THRESH, 360); // tuning parm default
   writeReg16Bit(VL53L1X_DEFINITIONS::RANGE_CONFIG__MIN_COUNT_RATE_RTN_LIMIT_MCPS, 192); // tuning parm default
-  std::cout << "6" << std::endl;
 
   // dynamic config
 
   writeReg(VL53L1X_DEFINITIONS::SYSTEM__GROUPED_PARAMETER_HOLD_0, 0x01);
   writeReg(VL53L1X_DEFINITIONS::SYSTEM__GROUPED_PARAMETER_HOLD_1, 0x01);
   writeReg(VL53L1X_DEFINITIONS::SD_CONFIG__QUANTIFIER, 2); // tuning parm default
-  std::cout << "7" << std::endl;
 
   // VL53L1_preset_mode_standard_ranging() end
 
@@ -155,22 +149,18 @@ bool VL53L1X::init(bool io_2v8)
   // does here).
   writeReg(VL53L1X_DEFINITIONS::SYSTEM__GROUPED_PARAMETER_HOLD, 0x00);
   writeReg(VL53L1X_DEFINITIONS::SYSTEM__SEED_CONFIG, 1); // tuning parm default
-  std::cout << "8" << std::endl;
 
   // from VL53L1_config_low_power_auto_mode
   writeReg(VL53L1X_DEFINITIONS::SYSTEM__SEQUENCE_CONFIG, 0x8B); // VHV, PHASECAL, DSS1, RANGE
   writeReg16Bit(VL53L1X_DEFINITIONS::DSS_CONFIG__MANUAL_EFFECTIVE_SPADS_SELECT, 200 << 8);
   writeReg(VL53L1X_DEFINITIONS::DSS_CONFIG__ROI_MODE_CONTROL, 2); // REQUESTED_EFFFECTIVE_SPADS
-  std::cout << "9" << std::endl;
 
   // VL53L1_set_preset_mode() end
 
   // default to long range, 50 ms timing budget
   // note that this is different than what the API defaults to
-  setDistanceMode(VL53L1X_DEFINITIONS::Long);
-  std::cout << "9.5" << std::endl;
-  setMeasurementTimingBudget(50000);
-  std::cout << "10" << std::endl;
+  setDistanceMode((VL53L1X_DEFINITIONS::DistanceMode)this->range_mode);
+  setMeasurementTimingBudget(this->timing_budget);
 
   // VL53L1_StaticInit() end
 
@@ -178,7 +168,6 @@ bool VL53L1X::init(bool io_2v8)
   // measurement is started; assumes MM1 and MM2 are disabled
   writeReg16Bit(VL53L1X_DEFINITIONS::ALGO__PART_TO_PART_RANGE_OFFSET_MM,
     readReg16Bit(VL53L1X_DEFINITIONS::MM_CONFIG__OUTER_OFFSET_MM) * 4);
-  std::cout << "11" << std::endl;
 
   return true;
 }
@@ -186,39 +175,18 @@ bool VL53L1X::init(bool io_2v8)
 // Write an 8-bit register
 void VL53L1X::writeReg(uint16_t reg, uint8_t value)
 {
-  /*Wire.beginTransmission(address);
-  Wire.write((reg >> 8) & 0xFF); // reg high byte
-  Wire.write( reg       & 0xFF); // reg low byte
-  Wire.write(value);
-  last_status = Wire.endTransmission();*/
-  printf("Write to byte\n");
   this->i2c->writeByte(reg, value);
 }
 
 // Write a 16-bit register
 void VL53L1X::writeReg16Bit(uint16_t reg, uint16_t value)
 {
-  /*Wire.beginTransmission(address);
-  Wire.write((reg >> 8) & 0xFF); // reg high byte
-  Wire.write( reg       & 0xFF); // reg low byte
-  Wire.write((value >> 8) & 0xFF); // value high byte
-  Wire.write( value       & 0xFF); // value low byte
-  last_status = Wire.endTransmission();*/
   this->i2c->writeWord(reg, value);
 }
 
 // Write a 32-bit register
 void VL53L1X::writeReg32Bit(uint16_t reg, uint32_t value)
 {
-  /*Wire.beginTransmission(address);
-  Wire.write((reg >> 8) & 0xFF); // reg high byte
-  Wire.write( reg       & 0xFF); // reg low byte
-  Wire.write((value >> 24) & 0xFF); // value highest byte
-  Wire.write((value >> 16) & 0xFF);
-  Wire.write((value >>  8) & 0xFF);
-  Wire.write( value        & 0xFF); // value lowest byte
-  last_status = Wire.endTransmission();*/
-  //this->i2c->writeReg32Bit(reg, value);
   uint16_t buffer[2];
   buffer[0] = value >> 16;
   buffer[1] = value;
@@ -228,18 +196,6 @@ void VL53L1X::writeReg32Bit(uint16_t reg, uint32_t value)
 // Read an 8-bit register
 uint8_t VL53L1X::readReg(uint16_t reg)
 {
-  /*uint8_t value;
-
-  Wire.beginTransmission(address);
-  Wire.write((reg >> 8) & 0xFF); // reg high byte
-  Wire.write( reg       & 0xFF); // reg low byte
-  last_status = Wire.endTransmission();
-
-  Wire.requestFrom(address, (uint8_t)1);
-  value = Wire.read();
-
-  return value;*/
-
   uint8_t buffer[1];
   this->i2c->readByte(reg, buffer);
   return buffer[0];
@@ -248,21 +204,7 @@ uint8_t VL53L1X::readReg(uint16_t reg)
 // Read a 16-bit register
 uint16_t VL53L1X::readReg16Bit(uint16_t reg)
 {
-  /*uint16_t value;
-
-  Wire.beginTransmission(address);
-  Wire.write((reg >> 8) & 0xFF); // reg high byte
-  Wire.write( reg       & 0xFF); // reg low byte
-  last_status = Wire.endTransmission();
-
-  Wire.requestFrom(address, (uint8_t)2);
-  value  = (uint16_t)Wire.read() << 8; // value high byte
-  value |=           Wire.read();      // value low byte
-
-  return value;*/
-
   uint16_t buffer;
-    printf("read word...\n");
   this->i2c->readWord(reg, &buffer);
   return buffer;
 }
@@ -270,21 +212,6 @@ uint16_t VL53L1X::readReg16Bit(uint16_t reg)
 // Read a 32-bit register
 uint32_t VL53L1X::readReg32Bit(uint16_t reg)
 {
-  /*uint32_t value;
-
-  Wire.beginTransmission(address);
-  Wire.write((reg >> 8) & 0xFF); // reg high byte
-  Wire.write( reg       & 0xFF); // reg low byte
-  last_status = Wire.endTransmission();
-
-  Wire.requestFrom(address, (uint8_t)4);
-  value  = (uint32_t)Wire.read() << 24; // value highest byte
-  value |= (uint32_t)Wire.read() << 16;
-  value |= (uint16_t)Wire.read() <<  8;
-  value |=           Wire.read();       // value lowest byte
-
-  return value;*/
-
   uint8_t buffer[4];
   uint32_t val = 0;
   this->i2c->readBytes(reg, 4, buffer);
@@ -300,7 +227,6 @@ bool VL53L1X::setDistanceMode(VL53L1X_DEFINITIONS::DistanceMode mode)
 {
   // save existing timing budget
   uint32_t budget_us = getMeasurementTimingBudget();
-  printf("Timing budget: %d\n", budget_us);
 
   switch (mode)
   {
@@ -411,7 +337,6 @@ bool VL53L1X::setMeasurementTimingBudget(uint32_t budget_us)
 
   // "Update Macro Period for Range B VCSEL Period"
   macro_period_us = calcMacroPeriod(readReg(VL53L1X_DEFINITIONS::RANGE_CONFIG__VCSEL_PERIOD_B));
-
   // "Update MM Timing B timeout"
   // (See earlier comment about MM Timing A timeout.)
   writeReg16Bit(VL53L1X_DEFINITIONS::MM_CONFIG__TIMEOUT_MACROP_B, encodeTimeout(
@@ -436,15 +361,12 @@ uint32_t VL53L1X::getMeasurementTimingBudget()
   // VL53L1_get_timeouts_us() begin
 
   // "Update Macro Period for Range A VCSEL Period"
-  std::cout << "9.6" << std::endl;
   uint32_t macro_period_us = calcMacroPeriod(readReg(VL53L1X_DEFINITIONS::RANGE_CONFIG__VCSEL_PERIOD_A));
-  std::cout << "9.7" << std::endl;
 
   // "Get Range Timing A timeout"
 
   uint32_t range_config_timeout_us = timeoutMclksToMicroseconds(decodeTimeout(
     readReg16Bit(VL53L1X_DEFINITIONS::RANGE_CONFIG__TIMEOUT_MACROP_A)), macro_period_us);
-  std::cout << "9.8" << std::endl;
 
   // VL53L1_get_timeouts_us() end
 
@@ -612,70 +534,11 @@ void VL53L1X::setupManualCalibration()
 // read measurement results into buffer
 void VL53L1X::readResults()
 {
-  /*Wire.beginTransmission(address);
-  Wire.write((VL53L1X_DEFINITIONS::RESULT__RANGE_STATUS >> 8) & 0xFF); // reg high byte
-  Wire.write( VL53L1X_DEFINITIONS::RESULT__RANGE_STATUS       & 0xFF); // reg low byte
-  last_status = Wire.endTransmission();
-
-  Wire.requestFrom(address, (uint8_t)17);
-
-  results.range_status = Wire.read();
-
-  Wire.read(); // report_status: not used
-
-  results.stream_count = Wire.read();
-
-  results.dss_actual_effective_spads_sd0  = (uint16_t)Wire.read() << 8; // high byte
-  results.dss_actual_effective_spads_sd0 |=           Wire.read();      // low byte
-
-  Wire.read(); // peak_signal_count_rate_mcps_sd0: not used
-  Wire.read();
-
-  results.ambient_count_rate_mcps_sd0  = (uint16_t)Wire.read() << 8; // high byte
-  results.ambient_count_rate_mcps_sd0 |=           Wire.read();      // low byte
-
-  Wire.read(); // sigma_sd0: not used
-  Wire.read();
-
-  Wire.read(); // phase_sd0: not used
-  Wire.read();
-
-  results.final_crosstalk_corrected_range_mm_sd0  = (uint16_t)Wire.read() << 8; // high byte
-  results.final_crosstalk_corrected_range_mm_sd0 |=           Wire.read();      // low byte
-
-  results.peak_signal_count_rate_crosstalk_corrected_mcps_sd0  = (uint16_t)Wire.read() << 8; // high byte
-  results.peak_signal_count_rate_crosstalk_corrected_mcps_sd0 |=           Wire.read();      // low byte*/
-
-  //Reset results
-  //this->i2c-writeByte(VL53L1X_DEFINITIONS::RESULT__RANGE_STATUS, 0);
-
-  //Read result data
-  /*int tmp_data = this->readReg32Bit(VL53L1X_DEFINITIONS::GLOBAL_CONFIG__SPAD_ENABLES_REF_3);
-  printf("tmp: %d\n", tmp_data);
-  int tmp_data2 = this->readReg32Bit(VL53L1X_DEFINITIONS::RANGE_RESULT__ACCUM_PHASE);
-  printf("tmp2: %d\n", tmp_data2);
-  int sensor_id = this->readReg(VL53L1X_DEFINITIONS::RANGING_CORE__DEVICE_ID);
-  printf("id: %d\n", sensor_id);
-  int tmp_data3 = this->readReg32Bit(VL53L1X_DEFINITIONS::INTERRUPT_SCHEDULER__DATA_OUT);
-  printf("tmp_data3: %d\n", tmp_data3);*/
-  /*memcpy(tmp_data_old, tmp_data, 1024*sizeof(int));
-  for(int i=0; i < 1024; i++){
-    tmp_data[i] = this->readReg32Bit(i*4);
-    if(tmp_data[i] != tmp_data_old[i]){
-      printf("tmp_data%i: %d\n", i, tmp_data);
-    }
-  }*/
-
   results.range_status = this->readReg(VL53L1X_DEFINITIONS::RESULT__RANGE_STATUS);
-  printf("Range Status: %d\n", results.range_status);
   results.stream_count = this->readReg(VL53L1X_DEFINITIONS::RESULT__STREAM_COUNT);
-  printf("stream_count: %d\n", results.stream_count);
   results.dss_actual_effective_spads_sd0 = this->readReg16Bit(VL53L1X_DEFINITIONS::RESULT__DSS_ACTUAL_EFFECTIVE_SPADS_SD0);
-  printf("dss_actual_effective_spads_sd0: %d\n", results.dss_actual_effective_spads_sd0);
   results.ambient_count_rate_mcps_sd0 = this->readReg16Bit(VL53L1X_DEFINITIONS::RESULT__AMBIENT_COUNT_RATE_MCPS_SD0);
-  printf("ambient_count_rate_mcps_sd0: %d\n", results.ambient_count_rate_mcps_sd0);
   results.final_crosstalk_corrected_range_mm_sd0 = this->readReg16Bit(VL53L1X_DEFINITIONS::RESULT__FINAL_CROSSTALK_CORRECTED_RANGE_MM_SD0);
-  printf("Corrected range: %d\n", results.final_crosstalk_corrected_range_mm_sd0);
   results.peak_signal_count_rate_crosstalk_corrected_mcps_sd0 = this->readReg16Bit(VL53L1X_DEFINITIONS::RESULT__PEAK_SIGNAL_COUNT_RATE_CROSSTALK_CORRECTED_MCPS_SD0);
 }
 
@@ -737,7 +600,8 @@ void VL53L1X::getRangingData()
   // gain factor of 2011 is tuning parm default (VL53L1_TUNINGPARM_LITE_RANGING_GAIN_FACTOR_DEFAULT)
   // Basically, this appears to scale the result by 2011/2048, or about 98%
   // (with the 1024 added for proper rounding).
-  ranging_data.range_mm = ((uint32_t)range * 2011 + 0x0400) / 0x0800;
+  //ranging_data.range_mm = ((uint32_t)range * 2011 + 0x0400) / 0x0800;
+  ranging_data.range_mm = ((uint32_t)range * calib[1]) + calib[0];
 
   // VL53L1_copy_sys_and_core_results_to_range_results() end
 
@@ -863,21 +727,16 @@ uint32_t VL53L1X::calcMacroPeriod(uint8_t vcsel_period)
 {
   // from VL53L1_calc_pll_period_us()
   // fast osc frequency in 4.12 format; PLL period in 0.24 format
-  std::cout << "9.61" << std::endl;
   uint32_t pll_period_us = ((uint32_t)0x01 << 30) / fast_osc_frequency;
-  std::cout << "9.62" << std::endl;
 
   // from VL53L1_decode_vcsel_period()
   uint8_t vcsel_period_pclks = (vcsel_period + 1) << 1;
-  std::cout << "9.63" << std::endl;
 
   // VL53L1_MACRO_PERIOD_VCSEL_PERIODS = 2304
   uint32_t macro_period_us = (uint32_t)2304 * pll_period_us;
-  std::cout << "9.64" << std::endl;
   macro_period_us >>= 6;
   macro_period_us *= vcsel_period_pclks;
   macro_period_us >>= 6;
-  std::cout << "9.65" << std::endl;
 
   return macro_period_us;
 }

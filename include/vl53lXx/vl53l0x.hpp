@@ -6,9 +6,6 @@
 #ifndef _VL53L0X_H
 #define _VL53L0X_H
 
-#include <fstream>
-#include <mutex>
-
 #include <vl53lXx/vl53lxx.hpp>
 #include <vl53lXx/vl53l0x_defines.hpp>
 
@@ -27,7 +24,7 @@ class VL53L0X : public VL53LXX {
 		 * since the API user manual says that it is performed by ST on the bare modules;
 		 * It seems like that should work well enough unless a cover glass is added.
 		 */
-		VL53L0X(uint8_t port, const int16_t xshutGPIOPin = -1, bool ioMode2v8 = true, const uint8_t address = VL53L0X_ADDRESS_DEFAULT);
+		VL53L0X(uint8_t port, const uint8_t address = VL53L0X_ADDRESS_DEFAULT, const int16_t xshutGPIOPin = -1, bool ioMode2v8 = true, float *calib = DEFAULT_CALIB);
 
 		/*** Public methods ***/
 		/**
@@ -35,15 +32,8 @@ class VL53L0X : public VL53LXX {
 		 *
 		 * It's not part of the constructor as it can throw errors.
 		 */
-		bool init(bool unused = true);
-		/**
-		 * Power on the sensor by setting its XSHUT pin to high via host's GPIO.
-		 */
-		void powerOn();
-		/**
-		 * Power off the sensor by setting its XSHUT pin to low via host's GPIO.
-		 */
-		void powerOff();
+		bool init();
+		
 		/**
 		 * Change sensor's I2C address (sets both the address on the physical sensor and within sensor's object).
 		 */
@@ -141,12 +131,6 @@ class VL53L0X : public VL53LXX {
 	private:
 		/*** Private fields ***/
 
-		int16_t xshutGPIOPin;
-		bool ioMode2v8;
-		std::string gpioFilename;
-		std::mutex fileAccessMutex;
-		bool gpioInitialized;
-
 		uint32_t measurementTimingBudgetMicroseconds;
 		uint64_t timeoutStartMilliseconds;
 		uint64_t ioTimeout;
@@ -157,7 +141,6 @@ class VL53L0X : public VL53LXX {
 		/*** Private methods ***/
 
 		void initHardware();
-		void initGPIO();
 		/**
 		 * Get reference SPAD (single photon avalanche diode) count and type.
 		 *
