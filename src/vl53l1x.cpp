@@ -37,6 +37,7 @@ void VL53L1X::setAddress(uint8_t new_addr)
   writeReg(VL53L1X_DEFINITIONS::SOFT_RESET, 0x00);
   usleep(100);
   writeReg(VL53L1X_DEFINITIONS::SOFT_RESET, 0x01);
+  usleep(100);
 
   writeReg(VL53L1X_DEFINITIONS::I2C_SLAVE__DEVICE_ADDRESS, new_addr & 0x7F);
 
