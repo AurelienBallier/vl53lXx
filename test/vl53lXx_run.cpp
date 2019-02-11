@@ -81,14 +81,14 @@ int main(int argc, char** argv){
         std::cout << "Initialization OK!" << std::endl;
         bool single = vm["single"].as<bool>();
 
+        unsigned int period = vm["period"].as<unsigned int>();
+        std::cout << "Period: " << period << " ms" << std::endl;
+
         range_sensor->startContinuous(period);
 
         if(single){
             std::cout << "Distance: " << range_sensor->readRangeSingleMillimeters() << " mm" << std::endl;
         }else{
-            unsigned int period = vm["period"].as<unsigned int>();
-            std::cout << "Period: " << period << " ms" << std::endl;
-
             while(true){
                 unsigned int i;
                 unsigned long int range = 0;
