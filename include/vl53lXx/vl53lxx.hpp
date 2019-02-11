@@ -51,7 +51,7 @@ class VL53LXX
     //GPIO
 		std::string gpioFilename;
 		std::mutex fileAccessMutex;
-		bool gpioInitialized;
+		bool gpioInitialized = false;
 
 		void initGPIO();
 };

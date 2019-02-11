@@ -22,6 +22,7 @@ VL53L1X::VL53L1X(uint8_t port, uint8_t address, const int16_t xshutGPIOPin, bool
   writeReg(VL53L1X_DEFINITIONS::SOFT_RESET, 0x00);
   usleep(100);
   writeReg(VL53L1X_DEFINITIONS::SOFT_RESET, 0x01);
+  usleep(100);
 }
 
 // Destructors ////////////////////////////////////////////////////////////////
