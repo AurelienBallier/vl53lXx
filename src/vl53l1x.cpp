@@ -8,9 +8,9 @@
 
 // Constructors ////////////////////////////////////////////////////////////////
 
-VL53L1X::VL53L1X(uint8_t port, uint8_t address, const int16_t xshutGPIOPin, bool ioMode2v8, float *calib, unsigned int timing_budget, unsigned int range_mode):
+VL53L1X::VL53L1X(uint8_t port, uint8_t address, const int16_t xshutGPIOPin, bool ioMode2v8, float *calib, unsigned int timing_budget, unsigned int range_mode, unsigned int timeout):
     VL53LXX(port, address, xshutGPIOPin, ioMode2v8, calib)
-  , io_timeout(0) // no timeout
+  , io_timeout(timeout) // timeout, 3s default
   , did_timeout(false)
   , calibrated(false)
   , saved_vhv_init(0)

@@ -22,7 +22,7 @@ class VL53L1X : public VL53LXX
 
     RangingData ranging_data;
 
-    VL53L1X(uint8_t port, const uint8_t address = VL53L1X_ADDRESS_DEFAULT, const int16_t xshutGPIOPin = -1, bool ioMode2v8 = true, float *calib = DEFAULT_CALIB, unsigned int timing_budget = 50000, unsigned int range_mode = VL53L1X_DEFINITIONS::Long);
+    VL53L1X(uint8_t port, const uint8_t address = VL53L1X_ADDRESS_DEFAULT, const int16_t xshutGPIOPin = -1, bool ioMode2v8 = true, float *calib = DEFAULT_CALIB, unsigned int timing_budget = 50000, unsigned int range_mode = VL53L1X_DEFINITIONS::Long, unsigned int timeout = 3);
     ~VL53L1X();
 
     void setAddress(uint8_t new_addr);
